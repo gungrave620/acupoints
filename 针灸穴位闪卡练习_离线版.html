@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>针灸穴位闪卡练习（离线版）</title>
+<meta name="description" content="针灸穴位实操考试练习工具，含60个穴位位置">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  touch-action: manipulation;
+}
+.container {
+  max-width: 600px;
+  width: 100%;
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+h1 { font-size: 20px; color: #1a1a2e; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 12px; margin-bottom: 16px; }
+
+.mode-switch { display: flex; background: #f1f5f9; border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+.mode-btn { flex: 1; padding: 10px 4px; border: none; background: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: #888; transition: all 0.2s; }
+.mode-btn.active { background: #fff; color: #1a1a2e; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+.progress-wrap { margin-bottom: 12px; }
+.progress-bar { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 3px; transition: width 0.3s; }
+
+.stats { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.stat { text-align: center; }
+.stat-value { font-size: 24px; font-weight: 700; color: #0f3460; }
+.stat.correct .stat-value { color: #22c55e; }
+.stat.wrong .stat-value { color: #ef4444; }
+.stat.remaining .stat-value { color: #f59e0b; }
+.stat-label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+
+.card-wrapper { perspective: 1000px; margin-bottom: 16px; }
+.card {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+.card.flipped { transform: rotateY(180deg); }
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.card-front {
+  background: linear-gradient(145deg, #e8f0fe, #d4e4fc);
+  border: 2px solid #b8d4fe;
+}
+.card-back {
+  background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+  border: 2px solid #bbf7d0;
+  transform: rotateY(180deg);
+  justify-content: flex-start;
+  padding-top: 16px;
+  overflow-y: auto;
+}
+.card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666; margin-bottom: 8px; }
+.card-code { font-size: 44px; font-weight: 800; color: #1a1a2e; letter-spacing: 2px; }
+.card-code.traditional { font-size: 32px; }
+.card-meridian { font-size: 13px; color: #666; margin-top: 6px; }
+
+.card-answer-name { font-size: 28px; font-weight: 700; color: #166534; margin-bottom: 2px; }
+.card-answer-pinyin { font-size: 14px; color: #666; margin-bottom: 6px; }
+.card-answer-meridian { font-size: 11px; color: #888; background: #dcfce7; padding: 2px 10px; border-radius: 10px; margin-bottom: 10px; }
+
+.card-location {
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 6px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid #bbf7d0;
+}
+.card-location-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.card-location-text { font-size: 13px; color: #1a1a2e; line-height: 1.5; }
+
+.actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.btn { padding: 12px 20px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn:active { transform: scale(0.96); }
+.btn-flip { background: #3b82f6; color: #fff; flex: 1; }
+.btn-correct { background: #22c55e; color: #fff; }
+.btn-wrong { background: #ef4444; color: #fff; }
+.btn-reset { background: #f1f5f9; color: #666; font-size: 12px; padding: 8px 16px; }
+
+.hint { margin-top: 14px; font-size: 11px; color: #aaa; line-height: 1.5; }
+
+.overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
+.overlay.show { display: flex; }
+.result-box { background: #fff; border-radius: 20px; padding: 32px 24px; text-align: center; max-width: 360px; width: 90%; }
+.result-score { font-size: 60px; font-weight: 800; }
+.result-score.pass { color: #22c55e; }
+.result-score.fail { color: #ef4444; }
+.result-text { font-size: 16px; margin: 10px 0; }
+.result-detail { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+@media (max-width: 400px) {
+  .container { padding: 16px 12px; }
+  .card { height: 260px; }
+  .card-code { font-size: 36px; }
+  .card-code.traditional { font-size: 26px; }
+  .card-answer-name { font-size: 24px; }
+  .btn { padding: 10px 14px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🧭 针灸穴位闪卡练习</h1>
+  <p class="subtitle">离线版 · 含60个穴位位置</p>
+
+  <div class="mode-switch">
+    <button class="mode-btn active" onclick="switchMode('all')">全部</button>
+    <button class="mode-btn" onclick="switchMode('meridian')">经络穴</button>
+    <button class="mode-btn" onclick="switchMode('traditional')">传统穴</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat correct">
+      <div class="stat-value" id="correctCount">0</div>
+      <div class="stat-label">正确</div>
+    </div>
+    <div class="stat wrong">
+      <div class="stat-value" id="wrongCount">0</div>
+      <div class="stat-label">错误</div>
+    </div>
+    <div class="stat remaining">
+      <div class="stat-value" id="remainingCount">60</div>
+      <div class="stat-label">剩余</div>
+    </div>
+  </div>
+
+  <div class="card-wrapper">
+    <div class="card" id="flashCard" onclick="flipCard()">
+      <div class="card-face card-front">
+        <div class="card-label" id="cardLabel">经络穴位</div>
+        <div class="card-code" id="cardCode">LI-4</div>
+        <div class="card-meridian" id="cardMeridian">手阳明大肠经</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-answer-name" id="cardAnswerName">合谷</div>
+        <div class="card-answer-pinyin" id="cardAnswerPinyin">He-gu</div>
+        <div class="card-answer-meridian" id="cardAnswerMeridian">手阳明大肠经</div>
+        <div class="card-location">
+          <div class="card-location-label">📍 穴位位置</div>
+          <div class="card-location-text" id="cardLocationText">手背，第1、2掌骨之间，约平第2掌骨中点处</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-flip" onclick="flipCard()">🔍 翻转</button>
+    <button class="btn btn-correct" onclick="markCorrect()">✅ 答对</button>
+    <button class="btn btn-wrong" onclick="markWrong()">❌ 答错</button>
+    <button class="btn btn-reset" onclick="resetCards()">🔄 重来</button>
+  </div>
+
+  <div class="hint">
+    💡 点击卡片翻转 | 左右滑动切换题目 | 双击卡片快速翻转
+  </div>
+</div>
+
+<div class="overlay" id="resultOverlay">
+  <div class="result-box">
+    <h3 style="margin-bottom:12px">本轮结束！</h3>
+    <div class="result-score" id="resultScore">85</div>
+    <div class="result-text" id="resultText"></div>
+    <div class="result-detail" id="resultDetail"></div>
+    <button class="btn btn-flip" onclick="closeResult()">继续练习</button>
+  </div>
+</div>
+
+<script>
+// 穴位数据（含位置）
+const MERIDIAN_POINTS = [
+  { code: "LU-1", name: "中府", pinyin: "Zhong-fu", meridian: "手太阴肺经", location: "胸前壁外上方，前正中线旁开6寸，平第1肋间隙处" },
+  { code: "LU-5", name: "尺泽", pinyin: "Chi-ze", meridian: "手太阴肺经", location: "肘横纹中，肱二头肌腱桡侧凹陷处" },
+  { code: "LU-7", name: "列缺", pinyin: "Lie-que", meridian: "手太阴肺经", location: "桡骨茎突上方，腕横纹上1.5寸" },
+  { code: "LU-9", name: "太渊", pinyin: "Tai-yuan", meridian: "手太阴肺经", location: "腕横纹桡侧端，桡动脉搏动处" },
+  { code: "LI-4", name: "合谷", pinyin: "He-gu", meridian: "手阳明大肠经", location: "手背，第1、2掌骨之间，约平第2掌骨中点处" },
+  { code: "LI-10", name: "前三里", pinyin: "Qian-san-li", meridian: "手阳明大肠经", location: "前臂，肘横纹下2寸，阳溪与曲池连线上" },
+  { code: "LI-11", name: "曲池", pinyin: "Qu-chi", meridian: "手阳明大肠经", location: "屈肘，肘横纹外侧端与肱骨外上髁连线中点" },
+  { code: "LI-15", name: "肩髃", pinyin: "Jian-yu", meridian: "手阳明大肠经", location: "肩峰端下缘，肩峰与肱骨大结节之间，三角肌上部中央" },
+  { code: "LI-20", name: "迎香", pinyin: "Ying-xiang", meridian: "手阳明大肠经", location: "鼻翼外缘中点旁，鼻唇沟中" },
+  { code: "ST-1", name: "承泣", pinyin: "Cheng-qi", meridian: "足阳明胃经", location: "瞳孔直下，眼球与眶下缘之间" },
+  { code: "ST-2", name: "四白", pinyin: "Si-bai", meridian: "足阳明胃经", location: "瞳孔直下，眶下孔凹陷处" },
+  { code: "ST-6", name: "颊车", pinyin: "Jia-che", meridian: "足阳明胃经", location: "面颊部，下颌角前上方约一横指，咀嚼时咬肌隆起处" },
+  { code: "ST-25", name: "天枢", pinyin: "Tian-shu", meridian: "足阳明胃经", location: "脐中旁开2寸" },
+  { code: "ST-35a", name: "犊鼻", pinyin: "Du-bi", meridian: "足阳明胃经", location: "屈膝，髌骨下缘，髌韧带外侧凹陷中" },
+  { code: "ST-36", name: "后三里", pinyin: "Hou-san-li", meridian: "足阳明胃经", location: "犊鼻下3寸，胫骨前嵴外一横指" },
+  { code: "BL-20", name: "脾俞", pinyin: "Pi-shu", meridian: "足太阳膀胱经", location: "第11胸椎棘突下，旁开1.5寸" },
+  { code: "BL-21", name: "胃俞", pinyin: "Wei-shu", meridian: "足太阳膀胱经", location: "第12胸椎棘突下，旁开1.5寸" },
+  { code: "BL-23", name: "肾俞", pinyin: "Shen-shu", meridian: "足太阳膀胱经", location: "第2腰椎棘突下，旁开1.5寸" },
+  { code: "BL-25", name: "大肠俞", pinyin: "Da-chang-shu", meridian: "足太阳膀胱经", location: "第4腰椎棘突下，旁开1.5寸" },
+  { code: "BL-40", name: "委中", pinyin: "Wei-zhong", meridian: "足太阳膀胱经", location: "腘横纹中点，股二头肌腱与半腱肌腱中间" },
+  { code: "BL-60", name: "昆仑", pinyin: "Kun-lun", meridian: "足太阳膀胱经", location: "外踝尖与跟腱之间的凹陷中" },
+  { code: "KID-1", name: "涌泉", pinyin: "Yong-quan", meridian: "足少阴肾经", location: "足底前1/3凹陷处，第2、3趾趾缝纹头端与足跟连线的前1/3处" },
+  { code: "KID-3", name: "太溪", pinyin: "Tai-xi", meridian: "足少阴肾经", location: "内踝尖与跟腱之间的凹陷中" },
+  { code: "KID-6", name: "照海", pinyin: "Zhao-hai", meridian: "足少阴肾经", location: "内踝尖下方凹陷处" },
+  { code: "KID-7", name: "复溜", pinyin: "Fu-liu", meridian: "足少阴肾经", location: "太溪上2寸，跟腱前缘" },
+  { code: "PC-3", name: "曲泽", pinyin: "Qu-ze", meridian: "手厥阴心包经", location: "肘横纹中，肱二头肌腱尺侧凹陷处" },
+  { code: "PC-6", name: "内关", pinyin: "Nei-guan", meridian: "手厥阴心包经", location: "腕横纹上2寸，掌长肌腱与桡侧腕屈肌腱之间" },
+  { code: "PC-7", name: "大陵", pinyin: "Da-ling", meridian: "手厥阴心包经", location: "腕横纹中央，掌长肌腱与桡侧腕屈肌腱之间" },
+  { code: "PC-8", name: "劳宫", pinyin: "Lao-gong", meridian: "手厥阴心包经", location: "手掌心，第2、3掌骨之间，握拳屈指时中指尖处" },
+  { code: "TH-3", name: "中渚", pinyin: "Zhong-zhu", meridian: "手少阳三焦经", location: "手背，第4、5掌骨小头后缘之间凹陷中，液门穴后1寸" },
+  { code: "TH-4", name: "阳池", pinyin: "Yang-chi", meridian: "手少阳三焦经", location: "腕背横纹中，指总伸肌腱尺侧缘凹陷处" },
+  { code: "TH-5", name: "外关", pinyin: "Wai-guan", meridian: "手少阳三焦经", location: "腕背横纹上2寸，尺骨与桡骨之间" },
+  { code: "TH-17", name: "翳风", pinyin: "Yi-feng", meridian: "手少阳三焦经", location: "耳垂后方，乳突与下颌角之间的凹陷处" },
+  { code: "GB-1", name: "瞳子髎", pinyin: "Tong-zi-liao", meridian: "足少阳胆经", location: "目外眦旁，眶外侧缘处" },
+  { code: "GB-14", name: "阳白", pinyin: "Yang-bai", meridian: "足少阳胆经", location: "瞳孔直上，眉上1寸" },
+  { code: "GV-1", name: "长强", pinyin: "Chang-qiang", meridian: "督脉", location: "尾骨端下，当尾骨端与肛门连线的中点处" },
+  { code: "GV-4", name: "命门", pinyin: "Ming-men", meridian: "督脉", location: "第2腰椎棘突下凹陷中" },
+  { code: "GV-14", name: "大椎", pinyin: "Da-zhui", meridian: "督脉", location: "第7颈椎棘突下凹陷中" },
+  { code: "GV-20", name: "百会", pinyin: "Bai-hui", meridian: "督脉", location: "头顶正中线与两耳尖连线的交点处" },
+  { code: "GV-26", name: "人中", pinyin: "Ren-zhong", meridian: "督脉", location: "人中沟上1/3与下2/3交点处" },
+  { code: "CV-17", name: "膻中", pinyin: "Dan-zhong", meridian: "任脉", location: "前正中线上，平第4肋间隙，两乳头连线中点" },
+  { code: "CV-22", name: "天突", pinyin: "Tian-tu", meridian: "任脉", location: "胸骨上窝中央" },
+  { code: "CV-24", name: "承浆", pinyin: "Cheng-jiang", meridian: "任脉", location: "颏唇沟正中凹陷处" },
+];
+
+const TRADITIONAL_POINTS = [
+  { code: "天门", name: "天门", pinyin: "Tian-men", meridian: "传统穴位", location: "两眉中间至前发际成一直线" },
+  { code: "大风门", name: "大风门", pinyin: "Da-feng-men", meridian: "传统穴位", location: "后发际正中直上1寸" },
+  { code: "脑俞", name: "脑俞", pinyin: "Nao-shu", meridian: "传统穴位", location: "后头部，枕骨下凹陷处" },
+  { code: "龙会", name: "龙会", pinyin: "Long-hui", meridian: "传统穴位", location: "头顶部，百会穴前后各1寸处" },
+  { code: "风池", name: "风池", pinyin: "Feng-chi", meridian: "传统穴位", location: "枕骨下，胸锁乳突肌与斜方肌上端之间的凹陷处" },
+  { code: "翳风", name: "翳风", pinyin: "Yi-feng", meridian: "传统穴位", location: "耳垂后方，乳突与下颌角之间的凹陷处" },
+  { code: "安神", name: "安神", pinyin: "An-shen", meridian: "传统穴位", location: "耳后，翳风与风池连线中点" },
+  { code: "太阳", name: "太阳", pinyin: "Tai-yang", meridian: "传统穴位", location: "眉梢与目外眦之间，向后约一横指的凹陷处" },
+  { code: "山根", name: "山根", pinyin: "Shan-gen", meridian: "传统穴位", location: "两目内眦之间，鼻梁上低洼处" },
+  { code: "健胃", name: "健胃", pinyin: "Jian-wei", meridian: "传统穴位", location: "脐上4寸，前正中线上" },
+  { code: "睛明", name: "睛明", pinyin: "Jing-ming", meridian: "传统穴位", location: "目内眦角稍上方凹陷处" },
+  { code: "承泣", name: "承泣", pinyin: "Cheng-qi", meridian: "传统穴位", location: "瞳孔直下，眼球与眶下缘之间" },
+  { code: "迎香", name: "迎香", pinyin: "Ying-xiang", meridian: "传统穴位", location: "鼻翼外缘中点旁，鼻唇沟中" },
+  { code: "鼻通", name: "鼻通", pinyin: "Bi-tong", meridian: "传统穴位", location: "鼻唇沟上端尽处" },
+  { code: "上关", name: "上关", pinyin: "Shang-guan", meridian: "传统穴位", location: "耳前，颧弓上缘，下关直上" },
+  { code: "下关", name: "下关", pinyin: "Xia-guan", meridian: "传统穴位", location: "耳屏前，颧弓与下颌切迹所形成的凹陷中" },
+  { code: "抱腮", name: "抱腮", pinyin: "Bao-sai", meridian: "传统穴位", location: "面颊部，耳垂下缘前方，下颌角前上方一横指" },
+];
+
+let currentMode = 'all', cards = [], currentIndex = 0, correctCount = 0, wrongCount = 0, isFlipped = false;
+
+function buildCards() {
+  let pool = [];
+  if (currentMode === 'all' || currentMode === 'meridian') pool = pool.concat(MERIDIAN_POINTS);
+  if (currentMode === 'all' || currentMode === 'traditional') pool = pool.concat(TRADITIONAL_POINTS);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool;
+}
+
+function showCard() {
+  if (currentIndex >= cards.length) { showResult(); return; }
+  const card = cards[currentIndex];
+  const isTraditional = card.meridian === "传统穴位";
+  document.getElementById('cardLabel').textContent = isTraditional ? "传统穴位 / 经外奇穴" : "经络穴位";
+  document.getElementById('cardCode').textContent = card.code;
+  document.getElementById('cardCode').className = isTraditional ? "card-code traditional" : "card-code";
+  document.getElementById('cardMeridian').textContent = card.meridian;
+  document.getElementById('cardAnswerName').textContent = card.name;
+  document.getElementById('cardAnswerPinyin').textContent = card.pinyin;
+  document.getElementById('cardAnswerMeridian').textContent = card.meridian;
+  document.getElementById('cardLocationText').textContent = card.location;
+  isFlipped = false;
+  document.getElementById('flashCard').classList.remove('flipped');
+  document.getElementById('correctCount').textContent = correctCount;
+  document.getElementById('wrongCount').textContent = wrongCount;
+  document.getElementById('remainingCount').textContent = cards.length - currentIndex;
+  document.getElementById('progressFill').style.width = (currentIndex / cards.length * 100) + '%';
+}
+
+function flipCard() {
+  if (currentIndex >= cards.length) return;
+  isFlipped = !isFlipped;
+  document.getElementById('flashCard').classList.toggle('flipped', isFlipped);
+}
+
+function markCorrect() {
+  if (currentIndex >= cards.length) return;
+  if (!isFlipped) { flipCard(); setTimeout(() => advanceCard(true), 300); return; }
+  advanceCard(true);
+}
+
+function markWrong() {
+  if (currentIndex >= cards.length) return;
+  if (!isFlipped) { flipCard(); setTimeout(() => advanceCard(false), 300); return; }
+  advanceCard(false);
+}
+
+function advanceCard(isCorrect) {
+  isCorrect ? correctCount++ : wrongCount++;
+  currentIndex++;
+  showCard();
+}
+
+function showResult() {
+  const total = correctCount + wrongCount;
+  const score = total > 0 ? Math.round(correctCount / total * 100) : 0;
+  const pass = score >= 75;
+  document.getElementById('resultScore').textContent = score;
+  document.getElementById('resultScore').className = 'result-score ' + (pass ? 'pass' : 'fail');
+  document.getElementById('resultText').textContent = pass ? '🎉 恭喜合格！' : '📚 继续加油！';
+  document.getElementById('resultDetail').textContent = `正确 ${correctCount} / ${wrongCount} 错误 / ${total} 总计`;
+  document.getElementById('resultOverlay').classList.add('show');
+  document.getElementById('progressFill').style.width = '100%';
+}
+
+function closeResult() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  resetCards();
+}
+
+function resetCards() {
+  cards = buildCards();
+  currentIndex = 0; correctCount = 0; wrongCount = 0; isFlipped = false;
+  document.getElementById('correctCount').textContent = '0';
+  document.getElementById('wrongCount').textContent = '0';
+  document.getElementById('remainingCount').textContent = cards.length;
+  document.getElementById('progressFill').style.width = '0%';
+  showCard();
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  resetCards();
+}
+
+// 触摸滑动支持
+let touchStartX = 0;
+const cardEl = document.getElementById('flashCard');
+cardEl.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+cardEl.addEventListener('touchend', e => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 50) diff > 0 ? markCorrect() : markWrong();
+});
+
+// 双击翻转
+cardEl.addEventListener('dblclick', flipCard);
+
+// 初始化
+cards = buildCards();
+showCard();
+</script>
+</body>
+</html>
